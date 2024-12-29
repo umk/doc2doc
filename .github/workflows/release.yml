@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger only when a version tag is pushed
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ 'linux', 'windows', 'darwin' ]
+        arch: [ 'amd64', 'arm64' ]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build binary
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then EXT=".exe"; else EXT=""; fi
+          mkdir -p dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} \
+          go build -o dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}/doc2doc${EXT} .
+
+      - name: Compress binary
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            zip -j dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}.zip dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}/*
+          else
+            tar czvf dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }} .
+          fi
+
+      - name: Upload compressed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc2doc-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}.zip
+            dist/doc2doc-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          retention-days: 1
+
+  release:
+    name: Create and Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: ls -R artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

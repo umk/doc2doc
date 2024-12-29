@@ -1,0 +1,14 @@
+{
+  "files.associations": {
+    "*.d2d": "yaml"
+  },
+  "[gotmpl]": {
+    "editor.wordWrap": "on"
+  },
+  "[plaintext]": {
+    "editor.wordWrap": "on"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on"
+  }
+}
