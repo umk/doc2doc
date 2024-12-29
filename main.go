@@ -161,9 +161,9 @@ func run(ctx context.Context) error {
 
 	if writeErr != nil {
 		if rerr := bs.restoreBackups(); rerr != nil {
-			return fmt.Errorf("write error: %v; then failed to restore backups: %v", backupErr, rerr)
+			return fmt.Errorf("write error: %v; then failed to restore backups: %v", writeErr, rerr)
 		}
-		return fmt.Errorf("write error: %v; backups restored", backupErr)
+		return fmt.Errorf("write error: %v; backups restored", writeErr)
 	}
 
 	bs.removeBackups()

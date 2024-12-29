@@ -27,7 +27,7 @@ func generate(
 	outputPath string,
 ) (string, error) {
 	var sb strings.Builder
-	if previousIn == nil {
+	if previousIn == nil || previousOut == nil {
 		if err := createMessageTmpl.Execute(&sb, map[string]any{
 			"Prompt":      prompt,
 			"In":          in,
@@ -52,12 +52,16 @@ func generate(
 
 	params := getRequestParams(c, sb.String())
 
-	r, err := client.Completions.New(ctx, params)
+	r, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {
 		return "", fmt.Errorf("service request failed: %w", err)
 	}
 
-	v := r.Choices[0].Text
+	choice := r.Choices[0]
 
-	return v, nil
+	if choice.Message.Refusal != "" {
+		return "", fmt.Errorf("refused: %s", choice.Message.Refusal)
+	} else {
+		return choice.Message.Content, nil
+	}
 }

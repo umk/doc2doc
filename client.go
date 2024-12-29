@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
-	"github.com/openai/openai-go/shared"
 )
 
 func getClient(c *configService) *openai.Client {
@@ -19,17 +18,17 @@ func getClient(c *configService) *openai.Client {
 	return openai.NewClient(opts...)
 }
 
-func getRequestParams(c *configService, prompt string) openai.CompletionNewParams {
-	s := shared.UnionString(prompt)
-
+func getRequestParams(c *configService, prompt string) openai.ChatCompletionNewParams {
 	model := openai.ChatModelGPT4o
 	if c.Model != nil {
 		model = *c.Model
 	}
 
-	params := openai.CompletionNewParams{
-		Model:  openai.F(openai.CompletionNewParamsModel(model)),
-		Prompt: openai.F(openai.CompletionNewParamsPromptUnion(s)),
+	params := openai.ChatCompletionNewParams{
+		Model: openai.F(openai.ChatModel(model)),
+		Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
+			openai.UserMessage(prompt),
+		}),
 	}
 
 	if c.Seed != nil {
