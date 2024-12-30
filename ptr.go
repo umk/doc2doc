@@ -4,9 +4,11 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-func resolvePtrOrDefault(s *string) string {
+func resolvePtrOrDefault[V any](s *V) V {
+	var def V
+
 	if s == nil {
-		return ""
+		return def
 	}
 
 	return *s

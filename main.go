@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func main() {
@@ -110,20 +112,41 @@ func run(ctx context.Context) error {
 	var currentOut string
 
 	if !config.SaveMetaOnly {
-		generated, err := generate(
-			ctx,
-			&config.Service,
-			prompt,
-			previousIn,
-			previousOut,
-			currentIn,
-			config.OutputPath,
-		)
-		if err != nil {
-			return fmt.Errorf("error generating output: %w", err)
-		}
+	Retries:
+		for {
+			generated, err := generate(
+				ctx,
+				&config.Service,
+				prompt,
+				previousIn,
+				previousOut,
+				currentIn,
+				config.OutputPath,
+			)
+			if err != nil {
+				return fmt.Errorf("error generating output: %w", err)
+			}
 
-		currentOut = generated
+			currentOut = generated
+
+			if previousOut != nil && !config.Autoconfirm {
+				d := diffmatchpatch.New()
+				diffs := d.DiffMain(*previousOut, generated, false)
+				fmt.Println(renderDiff(diffs))
+
+				k, err := readKeyOrDefaultOf("Continue? (Y/n/r) ", 'y', 'n', 'r')
+				if err != nil {
+					return err
+				}
+
+				switch k {
+				case 'n':
+					return nil
+				case 'y':
+					break Retries
+				}
+			}
+		}
 	} else {
 		if outputExists {
 			currentOut = *previousOut

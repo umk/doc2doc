@@ -18,6 +18,7 @@ type config struct {
 
 	SaveMetaOnly bool // Only save metadata file based on the input and output
 	Force        bool // Force generation
+	Autoconfirm  bool // Answer Yes to all confirmations
 
 	Service configService
 }
@@ -100,6 +101,7 @@ func readConfigFromFlags(c *config) error {
 
 	saveMetaOnly := flag.Bool("meta", false, "only save metadata given input and output")
 	force := flag.Bool("force", false, "force generation")
+	autoconfirm := flag.Bool("y", false, "confirm automatically")
 
 	baseURL := flag.String("svc.base", "", "service base URL")
 	key := flag.String("svc.key", "", "service key")
@@ -129,6 +131,7 @@ func readConfigFromFlags(c *config) error {
 
 	c.SaveMetaOnly = *saveMetaOnly
 	c.Prompt = prompt
+	c.Autoconfirm = *autoconfirm
 
 	c.Force = *force
 
