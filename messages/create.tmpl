@@ -1,19 +1,15 @@
 Generate content for an output file using the input data provided below.
 
----
-`````
+-----
 {{ .In }}
-`````
 
----
-
+-----
 {{- if .PreviousOut }}
 Integrate the generated content into the current content of the file:
-`````
-{{ .PreviousOut }}
-`````
 
----
+{{ .PreviousOut }}
+
+-----
 {{- end }}
 
 Output file name: {{ .OutputPath }} 

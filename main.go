@@ -107,20 +107,34 @@ func run(ctx context.Context) error {
 		return nil
 	}
 
-	generated, err := generate(
-		ctx,
-		&config.Service,
-		prompt,
-		previousIn,
-		previousOut,
-		currentIn,
-		config.OutputPath,
-	)
-	if err != nil {
-		return fmt.Errorf("error generating output: %w", err)
+	var currentOut string
+
+	if !config.SaveMetaOnly {
+		generated, err := generate(
+			ctx,
+			&config.Service,
+			prompt,
+			previousIn,
+			previousOut,
+			currentIn,
+			config.OutputPath,
+		)
+		if err != nil {
+			return fmt.Errorf("error generating output: %w", err)
+		}
+
+		currentOut = generated
+	} else {
+		if outputExists {
+			currentOut = *previousOut
+		} else {
+			return fmt.Errorf("previous output doesn't exist")
+		}
 	}
 
-	outputSha256 := sha256.Sum256([]byte(generated))
+	currentOutBytes := []byte(currentOut)
+
+	outputSha256 := sha256.Sum256(currentOutBytes)
 	outputSha256Str := fmt.Sprintf("%x", outputSha256)
 
 	newMetadata := &metadata{}
@@ -155,8 +169,10 @@ func run(ctx context.Context) error {
 
 	if err := metadataWrite(config.MetaPath, newMetadata); err != nil {
 		writeErr = fmt.Errorf("error writing metadata file: %w", err)
-	} else if err := atomicWrite(config.OutputPath, []byte(generated)); err != nil {
-		writeErr = fmt.Errorf("error writing output file: %w", err)
+	} else if !config.SaveMetaOnly {
+		if err := atomicWrite(config.OutputPath, currentOutBytes); err != nil {
+			writeErr = fmt.Errorf("error writing output file: %w", err)
+		}
 	}
 
 	if writeErr != nil {

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -15,7 +16,8 @@ type config struct {
 
 	Prompt string
 
-	Force bool // Force generation
+	SaveMetaOnly bool // Only save metadata file based on the input and output
+	Force        bool // Force generation
 
 	Service configService
 }
@@ -96,6 +98,7 @@ func readConfigFromFlags(c *config) error {
 	outputPath := flag.String("o", "", "output file path (required)")
 	metaPath := flag.String("d", "", "metadata file path")
 
+	saveMetaOnly := flag.Bool("meta", false, "only save metadata given input and output")
 	force := flag.Bool("force", false, "force generation")
 
 	baseURL := flag.String("svc.base", "", "service base URL")
@@ -107,6 +110,8 @@ func readConfigFromFlags(c *config) error {
 	topP := flag.Float64("gen.p", 0, "generation top P")
 
 	flag.Parse()
+
+	slices.Sort(c.InputPath)
 
 	// Handle positional arguments and assign values to Config
 	var prompt string
@@ -122,6 +127,7 @@ func readConfigFromFlags(c *config) error {
 	c.OutputPath = *outputPath
 	c.MetaPath = *metaPath
 
+	c.SaveMetaOnly = *saveMetaOnly
 	c.Prompt = prompt
 
 	c.Force = *force

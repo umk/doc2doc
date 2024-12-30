@@ -1,24 +1,21 @@
-You are provided with a previous input file, the previous output file that was generated based on the previous input file, and a current input file. Your task is to compare the previous and current inputs, identify the differences, and update the previous output to align with the changes in the current input. Preserve all elements of the previous output, which are not related to the current input.
+You are provided with a previous input file, the previous output file that was generated based on the previous input file, and a current input file. Your task is to compare the previous and current inputs, identify the differences, and update the previous output to align with the changes in the current input. Generate output even if there are no changes between previous and current inputs. Preserve all elements of the previous output, which are not related to the current input.
 
----
+-----
 Previous input:
-`````
+
 {{ .PreviousIn }}
-`````
 
----
+-----
 Previous output:
-`````
+
 {{ .PreviousOut }}
-`````
 
----
+-----
 Current input:
-`````
-{{ .In }}
-`````
 
----
+{{ .In }}
+
+-----
 Output file name: {{ .OutputPath }} 
 
 {{- if .Prompt }}
