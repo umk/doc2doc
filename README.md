@@ -14,10 +14,12 @@ Usage: `doc2doc [arguments...] <prompt>`
 | `-gen.seed int`     | Generation seed                                                            |
 | `-gen.t float`      | Generation temperature                                                     |
 | `-i value`          | Input file path (required)                                                 |
+| `-meta`             | Only save metadata given input and output                                  |
 | `-o string`         | Output file path (required)                                                |
 | `-svc.base string`  | Service base URL                                                           |
 | `-svc.key string`   | Service key                                                                 |
 | `-svc.model string` | Service model name                                                          |
+| `-y`                | Confirm automatically                                                       |
 
 You can include an optional `prompt` argument to guide how the inputs should be transformed into the output file. Once provided, the prompt is saved in a metadata file, so you don't need to enter it again when updating the output, unless you want to change it. The `prompt` or `-i` values (but not both) can also be set to `-`, which tells the program to read the value from `stdin`.
 

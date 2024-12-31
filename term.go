@@ -13,7 +13,19 @@ import (
 // readKeySilent writes the prompt to the terminal and waits for a single key press silently.
 // It returns the key pressed as a rune, handling multi-byte characters.
 func readKeySilent(prompt ...string) (rune, error) {
-	fd := int(os.Stdin.Fd())
+	rd := os.Stdin
+
+	if !term.IsTerminal(int(rd.Fd())) {
+		f, err := os.Open("/dev/tty")
+		if err != nil {
+			return 0, err
+		}
+		defer f.Close()
+
+		rd = f
+	}
+
+	fd := int(rd.Fd())
 
 	// Save the original terminal state to restore later
 	oldState, err := term.GetState(fd)
@@ -33,7 +45,7 @@ func readKeySilent(prompt ...string) (rune, error) {
 	}
 
 	// Create a buffered reader for stdin
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(rd)
 
 	// Read a single UTF-8 encoded rune
 	r, _, err := reader.ReadRune()

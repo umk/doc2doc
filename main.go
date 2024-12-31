@@ -112,6 +112,8 @@ func run(ctx context.Context) error {
 	var currentOut string
 
 	if !config.SaveMetaOnly {
+		// isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
+
 	Retries:
 		for {
 			generated, err := generate(
@@ -142,10 +144,12 @@ func run(ctx context.Context) error {
 				switch k {
 				case 'n':
 					return nil
-				case 'y':
-					break Retries
+				case 'r':
+					continue Retries
 				}
 			}
+
+			break Retries
 		}
 	} else {
 		if outputExists {
