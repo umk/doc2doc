@@ -5,8 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"flag"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -21,27 +21,28 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	config, err := getConfig()
-	if err != nil {
+	if err := setConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	if err := checkBackupsDontExist(config.output, config.metadata); err != nil {
 		return err
 	}
 
-	if err := checkBackupsDontExist(config.OutputPath, config.MetaPath); err != nil {
-		return err
-	}
-
-	outputExists, err := checkExists(config.OutputPath)
+	outputExists, err := checkExists(config.output)
 	if err != nil {
 		return fmt.Errorf("error checking output file: %w", err)
 	}
 
-	metaExists, err := checkExists(config.MetaPath)
+	metaExists, err := checkExists(config.metadata)
 	if err != nil {
 		return fmt.Errorf("error checking metadata file: %w", err)
 	}
 
 	var inputContent bytes.Buffer
-	for i, in := range config.InputPath {
+	for i, in := range config.inputs {
 		if i > 0 {
 			inputContent.WriteString("\n\n")
 		}
@@ -53,36 +54,21 @@ func run(ctx context.Context) error {
 
 	var outputContent []byte
 	if outputExists {
-		outputContent, err = os.ReadFile(config.OutputPath)
+		outputContent, err = os.ReadFile(config.output)
 		if err != nil {
 			return fmt.Errorf("error reading output file: %w", err)
 		}
 	}
 
-	prompt, err := readPromptOrStdin(config.Prompt)
-	if err != nil {
-		return err
-	}
-
-	forceGenerate := config.Force
+	forceGenerate := config.force
 
 	var previousMd *metadata
 	if metaExists {
-		md, err := metadataRead(config.MetaPath)
+		md, err := metadataRead(config.metadata)
 		if err != nil {
 			return fmt.Errorf("error reading metadata file: %w", err)
 		}
 		previousMd = md
-
-		metaPrompt := md.Input.Prompt
-
-		if prompt == "" {
-			prompt = metaPrompt
-		} else if prompt != metaPrompt {
-			fmt.Fprintf(os.Stderr, "Warning: provided prompt differs from metadata prompt.\n")
-			forceGenerate = true
-			prompt = metaPrompt
-		}
 
 		if outputExists {
 			sum := sha256.Sum256(outputContent)
@@ -111,19 +97,15 @@ func run(ctx context.Context) error {
 
 	var currentOut string
 
-	if !config.SaveMetaOnly {
-		// isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
-
+	if !config.saveMetaOnly {
 	Retries:
 		for {
 			generated, err := generate(
 				ctx,
-				&config.Service,
-				prompt,
 				previousIn,
 				previousOut,
 				currentIn,
-				config.OutputPath,
+				config.output,
 			)
 			if err != nil {
 				return fmt.Errorf("error generating output: %w", err)
@@ -131,7 +113,7 @@ func run(ctx context.Context) error {
 
 			currentOut = generated
 
-			if previousOut != nil && !config.Autoconfirm {
+			if previousOut != nil && !config.autoconfirm {
 				d := diffmatchpatch.New()
 				diffs := d.DiffMain(*previousOut, generated, false)
 				fmt.Println(renderDiff(diffs))
@@ -166,7 +148,6 @@ func run(ctx context.Context) error {
 
 	newMetadata := &metadata{}
 	newMetadata.Input.Content = currentIn
-	newMetadata.Input.Prompt = prompt
 	newMetadata.Output.Sha256 = outputSha256Str
 
 	bs := make(backupSet, 0, 2)
@@ -174,13 +155,13 @@ func run(ctx context.Context) error {
 	var backupErr error
 
 	if outputExists {
-		if _, err := bs.createBackup(config.OutputPath); err != nil {
+		if _, err := bs.createBackup(config.output); err != nil {
 			backupErr = fmt.Errorf("error backing up output file: %w", err)
 		}
 	}
 
 	if metaExists {
-		if _, err := bs.createBackup(config.MetaPath); err != nil {
+		if _, err := bs.createBackup(config.metadata); err != nil {
 			backupErr = fmt.Errorf("error backing up metadata file: %w", err)
 		}
 	}
@@ -194,10 +175,10 @@ func run(ctx context.Context) error {
 
 	var writeErr error
 
-	if err := metadataWrite(config.MetaPath, newMetadata); err != nil {
+	if err := metadataWrite(config.metadata, newMetadata); err != nil {
 		writeErr = fmt.Errorf("error writing metadata file: %w", err)
-	} else if !config.SaveMetaOnly {
-		if err := atomicWrite(config.OutputPath, currentOutBytes); err != nil {
+	} else if !config.saveMetaOnly {
+		if err := atomicWrite(config.output, currentOutBytes); err != nil {
 			writeErr = fmt.Errorf("error writing output file: %w", err)
 		}
 	}
@@ -212,19 +193,6 @@ func run(ctx context.Context) error {
 	bs.removeBackups()
 
 	return nil
-}
-
-func readPromptOrStdin(prompt string) (string, error) {
-	if prompt == "-" {
-		b, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return "", fmt.Errorf("error reading prompt from stdin: %w", err)
-		}
-
-		return string(b), nil
-	}
-
-	return prompt, nil
 }
 
 func readInputOrStdin(dst *bytes.Buffer, src string) error {

@@ -5,23 +5,23 @@ import (
 	"github.com/openai/openai-go/option"
 )
 
-func getClient(c *configService) *openai.Client {
+func getClient() *openai.Client {
 	var opts []option.RequestOption
 
-	if c.BaseURL != nil {
-		opts = append(opts, option.WithBaseURL(*c.BaseURL))
+	if config.service.baseURL != "" {
+		opts = append(opts, option.WithBaseURL(config.service.baseURL))
 	}
-	if c.Key != nil {
-		opts = append(opts, option.WithAPIKey(*c.Key))
+	if config.service.key != "" {
+		opts = append(opts, option.WithAPIKey(config.service.key))
 	}
 
 	return openai.NewClient(opts...)
 }
 
-func getRequestParams(c *configService, prompt string) openai.ChatCompletionNewParams {
+func getRequestParams(prompt string) openai.ChatCompletionNewParams {
 	model := openai.ChatModelGPT4o
-	if c.Model != nil {
-		model = *c.Model
+	if config.service.model != "" {
+		model = config.service.model
 	}
 
 	params := openai.ChatCompletionNewParams{
@@ -31,14 +31,14 @@ func getRequestParams(c *configService, prompt string) openai.ChatCompletionNewP
 		}),
 	}
 
-	if c.Seed != nil {
-		params.Seed = openai.F(*c.Seed)
+	if config.service.seed != 0 {
+		params.Seed = openai.F(config.service.seed)
 	}
-	if c.Temperature != nil {
-		params.Temperature = openai.F(*c.Temperature)
+	if config.service.temperature != 0 {
+		params.Temperature = openai.F(config.service.temperature)
 	}
-	if c.TopP != nil {
-		params.TopP = openai.F(*c.TopP)
+	if config.service.topP != 0 {
+		params.TopP = openai.F(config.service.topP)
 	}
 
 	return params

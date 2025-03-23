@@ -20,8 +20,6 @@ var updateMessageTmpl = template.Must(template.New("update").Parse(updateMessage
 
 func generate(
 	ctx context.Context,
-	c *configService,
-	prompt string,
 	previousIn, previousOut *string,
 	in string,
 	outputPath string,
@@ -29,7 +27,6 @@ func generate(
 	var sb strings.Builder
 	if previousIn == nil || previousOut == nil {
 		if err := createMessageTmpl.Execute(&sb, map[string]any{
-			"Prompt":      prompt,
 			"In":          in,
 			"OutputPath":  outputPath,
 			"PreviousOut": resolvePtrOrDefault(previousOut),
@@ -38,7 +35,6 @@ func generate(
 		}
 	} else {
 		if err := updateMessageTmpl.Execute(&sb, map[string]any{
-			"Prompt":      prompt,
 			"In":          in,
 			"OutputPath":  outputPath,
 			"PreviousIn":  *previousIn,
@@ -48,9 +44,9 @@ func generate(
 		}
 	}
 
-	client := getClient(c)
+	client := getClient()
 
-	params := getRequestParams(c, sb.String())
+	params := getRequestParams(sb.String())
 
 	r, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {

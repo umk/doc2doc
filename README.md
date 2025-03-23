@@ -1,8 +1,8 @@
 # doc2doc
 
-**doc2doc** is a simple command-line tool that takes an input file and an optional prompt, then creates or updates an output file. It compares the new input with the previous one to keep unchanged parts of the output and formatting intact, without needing extra instructions for the AI.
+**doc2doc** is a simple command-line tool that takes an input file, then creates or updates an output file. It compares the new input with the previous one to keep unchanged parts of the output and formatting intact, without needing extra instructions for the AI.
 
-Usage: `doc2doc [arguments...] <prompt>`
+Usage: `doc2doc [arguments...]`
 
 ### Arguments
 
@@ -21,7 +21,7 @@ Usage: `doc2doc [arguments...] <prompt>`
 | `-svc.model string` | Service model name                                                          |
 | `-y`                | Confirm automatically                                                       |
 
-You can include an optional `prompt` argument to guide how the inputs should be transformed into the output file. Once provided, the prompt is saved in a metadata file, so you don't need to enter it again when updating the output, unless you want to change it. The `prompt` or `-i` values (but not both) can also be set to `-`, which tells the program to read the value from `stdin`.
+The `-i` value can also be set to `-`, which tells the program to read the value from `stdin`.
 
 ### Environment variables
 
@@ -33,18 +33,10 @@ You can include an optional `prompt` argument to guide how the inputs should be 
 
 If base URL is omitted, OpenAI service is used. The key must be specified either way to make the OpenAI client library happy. If model is not specified, `gpt-4o` is used.
 
-### Examples
+### Example
 
 Refresh the application arguments list in README.md based on the output of `doc2doc --help`
 
 ```sh
-./doc2doc --help 2>&1 | ./d2d-ollama.sh "qwen2.5:14b" -d .doc2doc/arguments.d2d -i - -o README.md "Command line arguments list in a form of a table: one column for the argument in monospace font, and another for description. The description must start from title case."
-```
-
-Or the prompt can be omitted if using existing metadata file:
-
-```sh
 ./doc2doc --help 2>&1 | ./d2d-ollama.sh "qwen2.5:14b" -d .doc2doc/arguments.d2d -i - -o README.md
 ```
-
-In this case the prompt will be reused from the metadata. The prompt can be edited directly in the metadata file later.

@@ -12,10 +12,6 @@ Integrate the generated content into the current content of the file:
 -----
 {{- end }}
 
-Output file name: {{ .OutputPath }} 
-
-{{- if .Prompt }}
-Consider the following user request, which clarifies how the input should be transformed into the output: {{ .Prompt }}
-{{- end }}
+Output file name: {{ .OutputPath }}
 
 Output only the content of the file and nothing else. Do not wrap your output into Markdown code block. Do not request clarification from the user, as this session is non-interactive.

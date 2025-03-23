@@ -16,7 +16,6 @@ type metadata struct {
 	// Input represents the previous input information used to generate the output.
 	Input struct {
 		Content string // Content is the previous input file content.
-		Prompt  string // Prompt is the prompt used in generating the previous output.
 	}
 	// Output holds additional information about previously generated output.
 	Output struct {
@@ -25,8 +24,7 @@ type metadata struct {
 }
 
 type metadataView struct {
-	Prompt string
-	Data   string // Compressed base64 content
+	Data string // Compressed base64 content
 }
 
 type metadataViewData struct {
@@ -75,7 +73,6 @@ func metadataRead(metaPath string) (*metadata, error) {
 	var md metadata
 
 	md.Input.Content = vd.Input.Content
-	md.Input.Prompt = v.Prompt
 	md.Output.Sha256 = vd.Output.Sha256
 
 	return &md, nil
@@ -108,8 +105,7 @@ func metadataWrite(metaPath string, md *metadata) error {
 	base64.StdEncoding.Encode(zbuf, zb)
 
 	v := metadataView{
-		Prompt: md.Input.Prompt,
-		Data:   string(zbuf),
+		Data: string(zbuf),
 	}
 
 	vb, err := yaml.Marshal(&v)

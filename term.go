@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"slices"
 	"unicode"
 
@@ -16,13 +17,17 @@ func readKeySilent(prompt ...string) (rune, error) {
 	rd := os.Stdin
 
 	if !term.IsTerminal(int(rd.Fd())) {
-		f, err := os.Open("/dev/tty")
-		if err != nil {
-			return 0, err
-		}
-		defer f.Close()
+		if runtime.GOOS == "windows" {
+			return 0, fmt.Errorf("not an interactive shell")
+		} else {
+			f, err := os.Open("/dev/tty")
+			if err != nil {
+				return 0, err
+			}
+			defer f.Close()
 
-		rd = f
+			rd = f
+		}
 	}
 
 	fd := int(rd.Fd())

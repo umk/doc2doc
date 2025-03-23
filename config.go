@@ -6,64 +6,56 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 )
 
-type config struct {
-	InputPath  []string
-	OutputPath string
-	MetaPath   string
+var config struct {
+	inputs   []string
+	output   string
+	metadata string
 
-	Prompt string
+	saveMetaOnly bool // Only save metadata file based on the input and output
+	force        bool // Force generation
+	autoconfirm  bool // Answer Yes to all confirmations
 
-	SaveMetaOnly bool // Only save metadata file based on the input and output
-	Force        bool // Force generation
-	Autoconfirm  bool // Answer Yes to all confirmations
+	service struct {
+		baseURL string
+		key     string
+		model   string
 
-	Service configService
+		seed        int64
+		temperature float64
+		topP        float64
+	}
 }
 
-type configService struct {
-	BaseURL *string
-	Key     *string
-	Model   *string
+func setConfig() error {
+	readConfigFromEnv()
 
-	Seed        *int64
-	Temperature *float64
-	TopP        *float64
+	if err := readConfigFromFlags(); err != nil {
+		return err
+	}
+
+	if len(config.inputs) == 0 {
+		return fmt.Errorf("input file path is required")
+	}
+	if config.output == "" {
+		return fmt.Errorf("output file path is required")
+	}
+	if config.metadata == "" {
+		config.metadata = config.output + ".d2d"
+	}
+
+	if err := checkRedirects(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func getConfig() (*config, error) {
-	config := &config{}
-
-	readConfigFromEnv(config)
-
-	if err := readConfigFromFlags(config); err != nil {
-		return nil, err
-	}
-
-	if len(config.InputPath) == 0 {
-		return nil, fmt.Errorf("input file path is required")
-	}
-	if config.OutputPath == "" {
-		return nil, fmt.Errorf("output file path is required")
-	}
-	if config.MetaPath == "" {
-		config.MetaPath = config.OutputPath + ".d2d"
-	}
-
-	if err := checkRedirects(config); err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-func checkRedirects(c *config) error {
+func checkRedirects() error {
 	hasRedirect := false
 
-	values := append([]string{c.Prompt}, c.InputPath...)
-	for _, v := range values {
+	for _, v := range config.inputs {
 		if v == "-" {
 			if hasRedirect {
 				return errors.New("cannot use redirect to stdin for more than one input")
@@ -76,85 +68,47 @@ func checkRedirects(c *config) error {
 	return nil
 }
 
-func readConfigFromEnv(c *config) {
+func readConfigFromEnv() {
 	if v, ok := os.LookupEnv("D2D_BASE_URL"); ok {
-		c.Service.BaseURL = &v
+		config.service.baseURL = v
 	}
 	if v, ok := os.LookupEnv("D2D_KEY"); ok {
-		c.Service.Key = &v
+		config.service.key = v
 
 		os.Unsetenv("D2D_KEY")
 	}
 	if v, ok := os.LookupEnv("D2D_MODEL"); ok {
-		c.Service.Model = &v
+		config.service.model = v
 	}
 }
 
-func readConfigFromFlags(c *config) error {
+func readConfigFromFlags() error {
 	// Define and parse command-line flags
 	flag.Func("i", "input file path (required)", func(v string) error {
-		c.InputPath = append(c.InputPath, v)
+		config.inputs = append(config.inputs, v)
 		return nil
 	})
-	outputPath := flag.String("o", "", "output file path (required)")
-	metaPath := flag.String("d", "", "metadata file path")
+	flag.StringVar(&config.output, "o", "", "output file path (required)")
+	flag.StringVar(&config.metadata, "d", "", "metadata file path")
 
-	saveMetaOnly := flag.Bool("meta", false, "only save metadata given input and output")
-	force := flag.Bool("force", false, "force generation")
-	autoconfirm := flag.Bool("y", false, "confirm automatically")
+	flag.BoolVar(&config.saveMetaOnly, "meta", false, "only save metadata given input and output")
+	flag.BoolVar(&config.force, "force", false, "force generation")
+	flag.BoolVar(&config.autoconfirm, "y", false, "confirm automatically")
 
-	baseURL := flag.String("svc.base", "", "service base URL")
-	key := flag.String("svc.key", "", "service key")
-	model := flag.String("svc.model", "", "service model name")
+	flag.StringVar(&config.service.baseURL, "svc.base", "", "service base URL")
+	flag.StringVar(&config.service.key, "svc.key", "", "service key")
+	flag.StringVar(&config.service.model, "svc.model", "", "service model name")
 
-	seed := flag.Int64("gen.seed", 0, "generation seed")
-	temperature := flag.Float64("gen.t", 0, "generation temperature")
-	topP := flag.Float64("gen.p", 0, "generation top P")
+	flag.Int64Var(&config.service.seed, "gen.seed", 0, "generation seed")
+	flag.Float64Var(&config.service.temperature, "gen.t", 0, "generation temperature")
+	flag.Float64Var(&config.service.topP, "gen.p", 0, "generation top P")
 
 	flag.Parse()
 
-	slices.Sort(c.InputPath)
+	slices.Sort(config.inputs)
 
-	// Handle positional arguments and assign values to Config
-	var prompt string
-	switch flag.NArg() {
-	case 0:
-		// No additional arguments
-	case 1:
-		prompt = strings.TrimSpace(flag.Arg(0))
-	default:
+	if flag.NArg() > 0 {
 		return fmt.Errorf("unexpected number of arguments: %d", flag.NArg())
-	}
-
-	c.OutputPath = *outputPath
-	c.MetaPath = *metaPath
-
-	c.SaveMetaOnly = *saveMetaOnly
-	c.Prompt = prompt
-	c.Autoconfirm = *autoconfirm
-
-	c.Force = *force
-
-	// Assign service-specific parameters
-	if *baseURL != "" {
-		c.Service.BaseURL = baseURL
-	}
-	if *key != "" {
-		c.Service.Key = key
-	}
-	if *model != "" {
-		c.Service.Model = model
-	}
-
-	// Assign generation parameters
-	if *seed != 0 {
-		c.Service.Seed = seed
-	}
-	if *temperature != 0 {
-		c.Service.Temperature = temperature
-	}
-	if *topP != 0 {
-		c.Service.TopP = topP
 	}
 
 	return nil
